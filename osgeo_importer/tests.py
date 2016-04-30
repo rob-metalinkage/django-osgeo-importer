@@ -53,7 +53,9 @@ class MapStoryTestMixin(TestCase):
         self.assertTrue('login' in response.url)
 
     def assertHasGoogleAnalytics(self, response):
-        self.assertTrue('mapstory/google_analytics.html' in [t.name for t in response.templates])
+        self.assertTrue(
+            'mapstory/google_analytics.html' in [
+                t.name for t in response.templates])
 
     def create_user(self, username, password, **kwargs):
         """
@@ -69,6 +71,7 @@ class MapStoryTestMixin(TestCase):
 
 
 class UploaderTests(MapStoryTestMixin):
+
     """
     Basic checks to make sure pages load, etc.
     """
@@ -85,7 +88,9 @@ class UploaderTests(MapStoryTestMixin):
                   'port': settings['PORT'],
                   'enabled': "True"}
 
-        store = catalog.create_datastore(settings['NAME'], workspace=self.workspace)
+        store = catalog.create_datastore(
+            settings['NAME'],
+            workspace=self.workspace)
         store.connection_parameters.update(params)
 
         try:
@@ -105,10 +110,14 @@ class UploaderTests(MapStoryTestMixin):
         self.postgis = db.connections['datastore']
         self.postgis_settings = self.postgis.settings_dict
 
-        self.username, self.password = self.create_user('admin', 'admin', is_superuser=True)
-        self.non_admin_username, self.non_admin_password = self.create_user('non_admin', 'non_admin')
-        self.cat = Catalog(ogc_server_settings.internal_rest, *ogc_server_settings.credentials)
-        if self.cat.get_workspace('geonode') == None:
+        self.username, self.password = self.create_user(
+            'admin', 'admin', is_superuser=True)
+        self.non_admin_username, self.non_admin_password = self.create_user(
+            'non_admin', 'non_admin')
+        self.cat = Catalog(
+            ogc_server_settings.internal_rest,
+            *ogc_server_settings.credentials)
+        if self.cat.get_workspace('geonode') is None:
             self.cat.create_workspace('geonode', 'http://geonode.org')
         self.workspace = 'geonode'
         self.datastore = self.create_datastore(self.postgis, self.cat)
@@ -119,6 +128,7 @@ class UploaderTests(MapStoryTestMixin):
         """
         self.cat.delete(self.datastore, recurse=True)
 
+<<<<<<< HEAD
     def generic_api_import(self,file,configuration_options=[{'index':0}]):
         """
         Tests the import api.
@@ -151,59 +161,161 @@ class UploaderTests(MapStoryTestMixin):
         layer = Layer.objects.get(pk=layerid)
 
         return layer
+=======
+    def generic_api_upload(self, files, configuration_options=None):
+        """
+        Tests the import api.
+        """
+        c = AdminClient()
+        c.login_as_non_admin()
+        if isinstance(files, type(str())):
+            files = [files]
+        outfiles = []
+        handles = {}
+        for file in files:
+            f = os.path.join(
+                os.path.dirname(__file__),
+                '..',
+                'importer-test-files',
+                file)
+            handles[file] = open(f)
+            outfiles.append(SimpleUploadedFile(file, handles[file].read()))
+        response = c.post(
+            reverse('uploads-multi-json'),
+            {'file': outfiles,
+             'json': json.dumps(configuration_options)},
+            follow=True)
+        # Clean up file handles
+        for file, handle in handles.items():
+            handle.close()
+
+        content = json.loads(response.content)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(content['id'], 1)
+        print content
+        return content
+>>>>>>> upstream/multiupload_cherrypick
 
     def generic_import(self, file, configuration_options=[{'index': 0}]):
 
         f = file
-        filename = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', f)
+        filename = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            f)
 
+<<<<<<< HEAD
         #res = self.import_file(filename, configuration_options=configuration_options)
 
         #layer = Layer.objects.get(name=res[0][0])
         layer = self.generic_api_import(file,configuration_options)
+=======
+        res = self.import_file(
+            filename,
+            configuration_options=configuration_options)
+
+        layer = Layer.objects.get(name=res[0][0])
+
+>>>>>>> upstream/multiupload_cherrypick
         self.assertEqual(layer.srid, 'EPSG:4326')
         self.assertEqual(layer.store, self.datastore.name)
         self.assertEqual(layer.storeType, 'dataStore')
 
+<<<<<<< HEAD
         if not file.endswith('zip'):
             self.assertTrue(layer.attributes.count() >= DataSource(filename)[0].num_fields)
+=======
+        if not filename.endswith('zip'):
+            self.assertTrue(
+                layer.attributes.count() >= DataSource(filename)[0].num_fields)
+>>>>>>> upstream/multiupload_cherrypick
 
         # make sure we have at least one dateTime attribute
-        self.assertTrue('xsd:dateTime' or 'xsd:date' in [n.attribute_type for n in layer.attributes.all()])
+        self.assertTrue('xsd:dateTime' or 'xsd:date' in [
+                        n.attribute_type for n in layer.attributes.all()])
 
         return layer
 
-    def generic_raster_import(self,file,configuration_options=[{'index':0}]):
+    def generic_raster_import(
+        self,
+        file,
+     configuration_options=[{'index': 0}]):
         f = file
+<<<<<<< HEAD
         filename = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', f)
         #layer = self.generic_api_import(file,configuration_options)
         res = self.import_file(filename, configuration_options=configuration_options)
         layerfile=res[0][0]
+=======
+        filename = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            f)
+        res = self.import_file(
+            filename,
+            configuration_options=configuration_options)
+        layerfile = res[0][0]
+>>>>>>> upstream/multiupload_cherrypick
         layername = os.path.splitext(os.path.basename(layerfile))[0]
         layer = Layer.objects.get(name=layername)
         self.assertTrue(layerfile.endswith('.tif'))
         self.assertTrue(os.path.exists(layerfile))
         l = gdal.OpenEx(layerfile)
-        self.assertTrue(l.GetDriver().ShortName,'GTiff')
+        self.assertTrue(l.GetDriver().ShortName, 'GTiff')
         return layer
+
+    def test_multi_upload(self):
+        """
+        Tests Uploading Multiple Files
+        """
+        upload = self.generic_api_upload(
+            ['boxes_with_year_field.zip',
+             'boxes_with_date.zip',
+             'point_with_date.geojson'],
+              [{'upload_file_name': 'boxes_with_year_field.shp',
+                'config': [{'index': 0}]},
+               {'upload_file_name': 'boxes_with_date.shp',
+               'config': [{'index': 0}]},
+               {'upload_file_name': 'point_with_date.geojson',
+                'config': [{'index': 0}]}
+               ]
+        )
+        self.assertEqual(9, upload['count'])
 
     def test_raster(self):
         """
         Tests raster import
         """
-        layer = self.generic_raster_import('test_grid.tif', configuration_options=[{'index':0}])
+        layer = self.generic_raster_import(
+            'test_grid.tif',
+            configuration_options=[{'index': 0}])
 
     def test_box_with_year_field(self):
         """
         Tests the import of test_box_with_year_field.
         """
 
+<<<<<<< HEAD
         layer = self.generic_import('boxes_with_year_field.zip', configuration_options=[{'index': 0,
                                                                                          'convert_to_date': ['date']}])
         date_attr = filter(lambda attr: attr.attribute == 'date_xd', layer.attributes)[0]
+=======
+        layer = self.generic_import(
+            'boxes_with_year_field.shp', configuration_options=[{'index': 0,
+                                                                 'convert_to_date': ['date']}])
+        date_attr = filter(
+            lambda attr: attr.attribute == 'date_xd',
+            layer.attributes)[0]
+>>>>>>> upstream/multiupload_cherrypick
         self.assertEqual(date_attr.attribute_type, 'xsd:long')
 
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
+        configure_time(
+            self.cat.get_layer(layer.name).resource,
+            attribute=date_attr.attribute,
+        )
 
         self.generic_time_check(layer, attribute=date_attr.attribute)
 
@@ -212,6 +324,7 @@ class UploaderTests(MapStoryTestMixin):
         Tests the import of test_boxes_with_date.
         """
 
+<<<<<<< HEAD
         layer = self.generic_import('boxes_with_date.zip', configuration_options=[{'index': 0,
                                                                                    'convert_to_date': ['date'],
                                                                                    'start_date': 'date',
@@ -219,9 +332,28 @@ class UploaderTests(MapStoryTestMixin):
                                                                                    }])
 
         date_attr = filter(lambda attr: attr.attribute == 'date_xd', layer.attributes)[0]
+=======
+        layer = self.generic_import(
+            'boxes_with_date.shp', configuration_options=[{'index': 0,
+                                                           'convert_to_date':
+                                                           [
+                                                           'date'],
+                                                           'start_date':
+                                                           'date',
+                                                           'configureTime':
+                                                           True
+                                                           }])
+
+        date_attr = filter(
+            lambda attr: attr.attribute == 'date_xd',
+            layer.attributes)[0]
+>>>>>>> upstream/multiupload_cherrypick
         self.assertEqual(date_attr.attribute_type, 'xsd:long')
 
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
+        configure_time(
+            self.cat.get_layer(layer.name).resource,
+            attribute=date_attr.attribute,
+        )
         self.generic_time_check(layer, attribute=date_attr.attribute)
 
     def test_boxes_with_date_csv(self):
@@ -229,12 +361,18 @@ class UploaderTests(MapStoryTestMixin):
         Tests a CSV with WKT polygon.
         """
 
-        layer = self.generic_import('boxes_with_date.csv', configuration_options=[{'index': 0,
-                                                                                         'convert_to_date': ['date']}])
-        date_attr = filter(lambda attr: attr.attribute == 'date_xd', layer.attributes)[0]
+        layer = self.generic_import(
+            'boxes_with_date.csv', configuration_options=[{'index': 0,
+                                                           'convert_to_date': ['date']}])
+        date_attr = filter(
+            lambda attr: attr.attribute == 'date_xd',
+            layer.attributes)[0]
         self.assertEqual(date_attr.attribute_type, 'xsd:long')
 
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
+        configure_time(
+            self.cat.get_layer(layer.name).resource,
+            attribute=date_attr.attribute,
+        )
         self.generic_time_check(layer, attribute=date_attr.attribute)
 
     def test_csv_missing_features(self):
@@ -242,19 +380,33 @@ class UploaderTests(MapStoryTestMixin):
         Test csv that has some rows without geoms and uses ISO-8859 (Latin 4) encoding.
         """
 
-        self.generic_import('missing-features.csv', configuration_options=[{'index': 0}])
+        self.generic_import(
+            'missing-features.csv',
+            configuration_options=[{'index': 0}])
 
     def test_boxes_with_iso_date(self):
         """
         Tests the import of test_boxes_with_iso_date.
         """
 
+<<<<<<< HEAD
         layer = self.generic_import('boxes_with_date_iso_date.zip', configuration_options=[{'index': 0,
                                                                                          'convert_to_date': ['date']}])
         date_attr = filter(lambda attr: attr.attribute == 'date_xd', layer.attributes)[0]
+=======
+        layer = self.generic_import(
+            'boxes_with_date_iso_date.shp', configuration_options=[{'index': 0,
+                                                                    'convert_to_date': ['date']}])
+        date_attr = filter(
+            lambda attr: attr.attribute == 'date_xd',
+            layer.attributes)[0]
+>>>>>>> upstream/multiupload_cherrypick
         self.assertEqual(date_attr.attribute_type, 'xsd:long')
 
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
+        configure_time(
+            self.cat.get_layer(layer.name).resource,
+            attribute=date_attr.attribute,
+        )
 
         self.generic_time_check(layer, attribute=date_attr.attribute)
 
@@ -262,11 +414,15 @@ class UploaderTests(MapStoryTestMixin):
         """
         Tests importing the same layer twice to ensure incrementing file names is properly handled.
         """
-        filename = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'boxes_with_date_iso_date.zip')
+        filename = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'boxes_with_date_iso_date.zip')
 
         gi = OGRImport(filename)
         layers1 = gi.handle({'index': 0, 'name': 'test'})
-        layers2 = gi.handle({'index': 0,  'name': 'test'})
+        layers2 = gi.handle({'index': 0, 'name': 'test'})
 
         self.assertEqual(layers1[0][0], 'test')
         self.assertEqual(layers2[0][0], 'test0')
@@ -275,7 +431,9 @@ class UploaderTests(MapStoryTestMixin):
         """
         Ensure the launder function works as expected.
         """
-        self.assertEqual(launder('tm_world_borders_simpl_0.3'), 'tm_world_borders_simpl_0_3')
+        self.assertEqual(
+            launder('tm_world_borders_simpl_0.3'),
+            'tm_world_borders_simpl_0_3')
         self.assertEqual(launder('Testing#'), 'testing_')
 
     def test_boxes_with_date_iso_date_zip(self):
@@ -283,12 +441,18 @@ class UploaderTests(MapStoryTestMixin):
         Tests the import of test_boxes_with_iso_date.
         """
 
-        layer = self.generic_import('boxes_with_date_iso_date.zip', configuration_options=[{'index': 0,
-                                                                                         'convert_to_date': ['date']}])
-        date_attr = filter(lambda attr: attr.attribute == 'date_xd', layer.attributes)[0]
+        layer = self.generic_import(
+            'boxes_with_date_iso_date.zip', configuration_options=[{'index': 0,
+                                                                    'convert_to_date': ['date']}])
+        date_attr = filter(
+            lambda attr: attr.attribute == 'date_xd',
+            layer.attributes)[0]
         self.assertEqual(date_attr.attribute_type, 'xsd:long')
 
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
+        configure_time(
+            self.cat.get_layer(layer.name).resource,
+            attribute=date_attr.attribute,
+        )
 
         self.generic_time_check(layer, attribute=date_attr.attribute)
 
@@ -297,13 +461,24 @@ class UploaderTests(MapStoryTestMixin):
         Tests the import of test_boxes_with_dates_bc.
         """
 
+<<<<<<< HEAD
         layer = self.generic_import('boxes_with_dates_bc.zip', configuration_options=[{'index': 0,
                                                                                          'convert_to_date': ['date']}])
+=======
+        layer = self.generic_import(
+            'boxes_with_dates_bc.shp', configuration_options=[{'index': 0,
+                                                               'convert_to_date': ['date']}])
+>>>>>>> upstream/multiupload_cherrypick
 
-        date_attr = filter(lambda attr: attr.attribute == 'date_xd', layer.attributes)[0]
+        date_attr = filter(
+            lambda attr: attr.attribute == 'date_xd',
+            layer.attributes)[0]
         self.assertEqual(date_attr.attribute_type, 'xsd:long')
 
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
+        configure_time(
+            self.cat.get_layer(layer.name).resource,
+            attribute=date_attr.attribute,
+        )
 
         self.generic_time_check(layer, attribute=date_attr.attribute)
 
@@ -312,15 +487,22 @@ class UploaderTests(MapStoryTestMixin):
         Tests the import of point_with_date.geojson
         """
 
-        layer = self.generic_import('point_with_date.geojson', configuration_options=[{'index': 0,
-                                                                                         'convert_to_date': ['date']}])
+        layer = self.generic_import(
+            'point_with_date.geojson', configuration_options=[{'index': 0,
+                                                               'convert_to_date': ['date']}])
 
-        # OGR will name geojson layers 'ogrgeojson' we rename to the path basename
+        # OGR will name geojson layers 'ogrgeojson' we rename to the path
+        # basename
         self.assertTrue(layer.name.startswith('point_with_date'))
-        date_attr = filter(lambda attr: attr.attribute == 'date_xd', layer.attributes)[0]
+        date_attr = filter(
+            lambda attr: attr.attribute == 'date_xd',
+            layer.attributes)[0]
         self.assertEqual(date_attr.attribute_type, 'xsd:long')
 
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
+        configure_time(
+            self.cat.get_layer(layer.name).resource,
+            attribute=date_attr.attribute,
+        )
         self.generic_time_check(layer, attribute=date_attr.attribute)
 
     def test_boxes_with_end_date(self):
@@ -329,6 +511,7 @@ class UploaderTests(MapStoryTestMixin):
         This layer has a date and an end date field that are typed correctly.
         """
 
+<<<<<<< HEAD
         layer = self.generic_import('boxes_with_end_date.zip',configuration_options=[{'index': 0,
                                                                                          'convert_to_date': ['date','enddate'],
                                                                                          'start_date': 'date',
@@ -338,14 +521,40 @@ class UploaderTests(MapStoryTestMixin):
 
         date_attr = filter(lambda attr: attr.attribute == 'date_xd', layer.attributes)[0]
         end_date_attr = filter(lambda attr: attr.attribute == 'enddate_xd', layer.attributes)[0]
+=======
+        layer = self.generic_import(
+            'boxes_with_end_date.shp', configuration_options=[{'index': 0,
+                                                               'convert_to_date':
+                                                               ['date',
+                                                                'enddate'],
+                                                               'start_date':
+                                                               'date',
+                                                               'end_date':
+                                                               'enddate',
+                                                               'configureTime':
+                                                               True
+                                                               }])
+
+        date_attr = filter(
+            lambda attr: attr.attribute == 'date_xd',
+            layer.attributes)[0]
+        end_date_attr = filter(
+            lambda attr: attr.attribute == 'enddate_xd',
+            layer.attributes)[0]
+>>>>>>> upstream/multiupload_cherrypick
 
         self.assertEqual(date_attr.attribute_type, 'xsd:long')
         self.assertEqual(end_date_attr.attribute_type, 'xsd:long')
 
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,
+        configure_time(
+            self.cat.get_layer(
+                layer.name).resource, attribute=date_attr.attribute,
                        end_attribute=end_date_attr.attribute)
 
-        self.generic_time_check(layer, attribute=date_attr.attribute, end_attribute=end_date_attr.attribute)
+        self.generic_time_check(
+            layer,
+            attribute=date_attr.attribute,
+            end_attribute=end_date_attr.attribute)
 
     def test_us_states_kml(self):
         """
@@ -361,13 +570,19 @@ class UploaderTests(MapStoryTestMixin):
         Tests the import of mojstrovka.gpx.
         This layer has a date and an end date field that are typed correctly.
         """
-        layer = self.generic_import('mojstrovka.gpx',configuration_options=[{'index': 0,
-                                                         'convert_to_date': ['time'],
-                                                         'configureTime': True
-                                                         }])
-        date_attr = filter(lambda attr: attr.attribute == 'time_xd', layer.attributes)[0]
+        layer = self.generic_import(
+            'mojstrovka.gpx', configuration_options=[{'index': 0,
+                                                      'convert_to_date':
+                                                      ['time'],
+                                                      'configureTime': True
+                                                      }])
+        date_attr = filter(
+            lambda attr: attr.attribute == 'time_xd',
+            layer.attributes)[0]
         self.assertEqual(date_attr.attribute_type, u'xsd:long')
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute)
+        configure_time(
+            self.cat.get_layer(layer.name).resource,
+            attribute=date_attr.attribute)
         self.generic_time_check(layer, attribute=date_attr.attribute)
 
     def generic_time_check(self, layer, attribute=None, end_attribute=None):
@@ -375,7 +590,10 @@ class UploaderTests(MapStoryTestMixin):
         Convenience method to run generic tests on time layers.
         """
         self.cat._cache.clear()
-        resource = self.cat.get_resource(layer.name, store=layer.store, workspace=self.workspace)
+        resource = self.cat.get_resource(
+            layer.name,
+            store=layer.store,
+            workspace=self.workspace)
 
         timeInfo = resource.metadata['time']
         self.assertEqual("LIST", timeInfo.presentation)
@@ -391,12 +609,19 @@ class UploaderTests(MapStoryTestMixin):
             self.skipTest('GDAL Version does not support open options')
 
         filename = 'US_Shootings.csv'
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', filename)
-        layer = self.generic_import(filename, configuration_options=[{'index': 0, 'convert_to_date': ['Date']}])
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            filename)
+        layer = self.generic_import(
+            filename, configuration_options=[{'index': 0, 'convert_to_date': ['Date']}])
         self.assertTrue(layer.name.startswith('us_shootings'))
 
         date_field = 'date_xd'
-        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_field)
+        configure_time(
+            self.cat.get_layer(layer.name).resource,
+            attribute=date_field)
         self.generic_time_check(layer, attribute=date_field)
 
     def test_sitins(self):
@@ -405,7 +630,10 @@ class UploaderTests(MapStoryTestMixin):
         """
         if osgeo.gdal.__version__ < '2.0.0':
             self.skipTest('GDAL Version does not support open options')
-        layer = self.generic_import("US_Civil_Rights_Sitins0.csv", configuration_options=[{'index': 0, 'convert_to_date': ['Date']}])
+        layer = self.generic_import(
+            "US_Civil_Rights_Sitins0.csv",
+            configuration_options=[{'index': 0,
+                                   'convert_to_date': ['Date']}])
 
     def get_layer_names(self, in_file):
         """
@@ -416,8 +644,13 @@ class UploaderTests(MapStoryTestMixin):
 
     def test_gdal_import(self):
         filename = 'point_with_date.geojson'
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', filename)
-        self.generic_import(filename, configuration_options=[{'index': 0,  'convert_to_date': ['date']}])
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            filename)
+        self.generic_import(filename, configuration_options=[
+                            {'index': 0, 'convert_to_date': ['date']}])
 
     def import_file(self, in_file, configuration_options=[]):
         """
@@ -437,8 +670,11 @@ class UploaderTests(MapStoryTestMixin):
         Exposes a PostGIS feature type in geoserver.
         """
         headers = {"Content-type": "application/xml"}
-        data = "<featureType><name>{name}</name></featureType>".format(name=name)
-        url = datastore.href.replace(".xml", '/featuretypes.xml'.format(name=name))
+        data = "<featureType><name>{name}</name></featureType>".format(
+            name=name)
+        url = datastore.href.replace(
+            ".xml",
+            '/featuretypes.xml'.format(name=name))
         headers, response = catalog.http.request(url, "POST ", data, headers)
         return response
 
@@ -447,17 +683,23 @@ class UploaderTests(MapStoryTestMixin):
         Tests the create_vrt function.
         """
         if osgeo.ogr.GetDriverByName('VRT') is None:
-           self.skipTest('VRT Driver Not Available')
+            self.skipTest('VRT Driver Not Available')
 
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'US_Shootings.csv')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'US_Shootings.csv')
 
         vrt = create_vrt(f)
         vrt.seek(0)
         output = vrt.read()
 
         self.assertTrue('name="US_Shootings"' in output)
-        self.assertTrue('<SrcDataSource>{0}</SrcDataSource>'.format(f) in output)
-        self.assertTrue('<GeometryField encoding="PointFromColumns" x="Longitude" y="Latitude" />'.format(f) in output)
+        self.assertTrue(
+            '<SrcDataSource>{0}</SrcDataSource>'.format(f) in output)
+        self.assertTrue(
+            '<GeometryField encoding="PointFromColumns" x="Longitude" y="Latitude" />'.format(f) in output)
         self.assertEqual(os.path.splitext(vrt.name)[1], '.vrt')
 
     def test_file_add_view(self):
@@ -465,9 +707,11 @@ class UploaderTests(MapStoryTestMixin):
         Tests the file_add_view.
         """
 
-
-
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'point_with_date.geojson')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'point_with_date.geojson')
         c = AdminClient()
 
         # test login required for this view
@@ -477,10 +721,15 @@ class UploaderTests(MapStoryTestMixin):
         c.login_as_non_admin()
 
         with open(f) as fp:
-            response = c.post(reverse('uploads-new'), {'file': fp}, follow=True)
+            response = c.post(
+                reverse('uploads-new'),
+                {'file': fp},
+                follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['request'].path, reverse('uploads-list'))
+        self.assertEqual(
+            response.context['request'].path,
+            reverse('uploads-list'))
         self.assertTrue(len(response.context['object_list']) == 1)
         upload = response.context['object_list'][0]
         self.assertEqual(upload.user.username, 'non_admin')
@@ -492,10 +741,17 @@ class UploaderTests(MapStoryTestMixin):
         uploaded_file = upload.uploadfile_set.first()
         self.assertTrue(os.path.exists(uploaded_file.file.path))
 
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'empty_file.geojson')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'empty_file.geojson')
 
         with open(f) as fp:
-            response = c.post(reverse('uploads-new'), {'file': fp}, follow=True)
+            response = c.post(
+                reverse('uploads-new'),
+                {'file': fp},
+                follow=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('file', response.context_data['form'].errors)
@@ -504,12 +760,19 @@ class UploaderTests(MapStoryTestMixin):
         """
         Tests the file_add_view.
         """
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'point_with_date.geojson')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'point_with_date.geojson')
         c = AdminClient()
         c.login_as_non_admin()
 
         with open(f) as fp:
-            response = c.post(reverse('uploads-new-json'), {'file': fp}, follow=True)
+            response = c.post(
+                reverse('uploads-new-json'),
+                {'file': fp},
+                follow=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('application/json', response.get('Content-Type', ''))
@@ -521,16 +784,21 @@ class UploaderTests(MapStoryTestMixin):
         """
         Tests the describe fields functionality.
         """
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'US_Shootings.csv')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'US_Shootings.csv')
         fields = None
 
         with GDALInspector(f) as f:
             layers = f.describe_fields()
 
         self.assertTrue(layers[0]['name'], 'us_shootings')
-        self.assertEqual([n['name'] for n in layers[0]['fields']], ['Date', 'Shooter', 'Killed',
-                                                                    'Wounded', 'Location', 'City',
-                                                                    'Longitude', 'Latitude'])
+        self.assertEqual(
+            [n['name'] for n in layers[0]['fields']], ['Date', 'Shooter', 'Killed',
+                                                       'Wounded', 'Location', 'City',
+                                                       'Longitude', 'Latitude'])
         self.assertEqual(layers[0]['feature_count'], 203)
 
     def test_gdal_file_type(self):
@@ -538,6 +806,7 @@ class UploaderTests(MapStoryTestMixin):
         Tests the describe fields functionality.
         """
         files = [
+<<<<<<< HEAD
                  (os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'US_Shootings.csv'), 'CSV'),
                  (os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'point_with_date.geojson'), 'GeoJSON'),
                  (os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'mojstrovka.gpx'), 'GPX'),
@@ -545,6 +814,21 @@ class UploaderTests(MapStoryTestMixin):
                  (os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'boxes_with_year_field.zip'), 'ESRI Shapefile'),
                  (os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'boxes_with_date_iso_date.zip'), 'ESRI Shapefile'),
             ]
+=======
+            (os.path.join(os.path.dirname(__file__), '..',
+                          'importer-test-files', 'US_Shootings.csv'), 'CSV'),
+                 (os.path.join(os.path.dirname(__file__), '..',
+                  'importer-test-files', 'point_with_date.geojson'), 'GeoJSON'),
+                 (os.path.join(os.path.dirname(__file__), '..',
+                  'importer-test-files', 'mojstrovka.gpx'), 'GPX'),
+                 (os.path.join(os.path.dirname(__file__), '..',
+                  'importer-test-files', 'us_states.kml'), 'KML'),
+                 (os.path.join(os.path.dirname(__file__), '..', 'importer-test-files',
+                  'boxes_with_year_field.shp'), 'ESRI Shapefile'),
+                 (os.path.join(os.path.dirname(__file__), '..', 'importer-test-files',
+                  'boxes_with_date_iso_date.zip'), 'ESRI Shapefile'),
+        ]
+>>>>>>> upstream/multiupload_cherrypick
 
         from .models import NoDataSourceFound
         try:
@@ -560,14 +844,21 @@ class UploaderTests(MapStoryTestMixin):
         """
         Tests the configuration view.
         """
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'point_with_date.geojson')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'point_with_date.geojson')
         new_user = User.objects.create(username='test')
         new_user_perms = ['change_resourcebase_permissions']
         c = AdminClient()
         c.login_as_non_admin()
 
         with open(f) as fp:
-            response = c.post(reverse('uploads-new'), {'file': fp}, follow=True)
+            response = c.post(
+                reverse('uploads-new'),
+                {'file': fp},
+                follow=True)
 
         upload = response.context['object_list'][0]
 
@@ -580,7 +871,8 @@ class UploaderTests(MapStoryTestMixin):
                                               'AnonymousUser': ["change_layer_data", "download_resourcebase",
                                                                 "view_resourcebase"]}}}]
 
-        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload.id), data=json.dumps(payload),
+        response = c.post(
+            '/importer-api/data-layers/{0}/configure/'.format(upload.id), data=json.dumps(payload),
                           content_type='application/json')
 
         self.assertTrue(response.status_code, 200)
@@ -590,22 +882,29 @@ class UploaderTests(MapStoryTestMixin):
         self.assertEqual(layer.store, self.datastore.name)
         self.assertEqual(layer.storeType, 'dataStore')
         self.assertTrue(layer.attributes[1].attribute_type, 'xsd:dateTime')
-        self.assertEqual(Layer.objects.all()[0].owner.username, self.non_admin_username)
+        self.assertEqual(
+            Layer.objects.all()[0].owner.username,
+            self.non_admin_username)
 
         perms = layer.get_all_level_info()
         user = User.objects.get(username=self.non_admin_username)
 
         # check user permissions
-        for perm in [u'publish_resourcebase', u'change_resourcebase_permissions',
+        for perm in [
+            u'publish_resourcebase', u'change_resourcebase_permissions',
                      u'delete_resourcebase', u'change_resourcebase', u'change_resourcebase_metadata',
                      u'download_resourcebase', u'view_resourcebase', u'change_layer_style',
                      u'change_layer_data']:
             self.assertIn(perm, perms['users'][user])
 
         self.assertTrue(perms['users'][new_user])
-        self.assertIn('change_resourcebase_permissions', perms['users'][new_user])
+        self.assertIn(
+            'change_resourcebase_permissions',
+            perms['users'][new_user])
 
-        self.assertIn("change_layer_data", perms['users'][User.objects.get(username='AnonymousUser')])
+        self.assertIn(
+            "change_layer_data",
+            perms['users'][User.objects.get(username='AnonymousUser')])
 
         lyr = self.cat.get_layer(layer.name)
         self.assertTrue('time' in lyr.resource.metadata)
@@ -615,12 +914,19 @@ class UploaderTests(MapStoryTestMixin):
         """
         Tests the configure view with a dataset that needs to be converted to a date.
         """
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'US_Shootings.csv')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'US_Shootings.csv')
         c = AdminClient()
         c.login_as_non_admin()
 
         with open(f) as fp:
-            response = c.post(reverse('uploads-new'), {'file': fp}, follow=True)
+            response = c.post(
+                reverse('uploads-new'),
+                {'file': fp},
+                follow=True)
 
         upload = response.context['object_list'][0]
 
@@ -630,14 +936,16 @@ class UploaderTests(MapStoryTestMixin):
                     'configureTime': True,
                     'editable': True}]
 
-
-        response = c.get('/importer-api/data-layers/{0}/configure/'.format(upload.id))
+        response = c.get(
+            '/importer-api/data-layers/{0}/configure/'.format(upload.id))
         self.assertEqual(response.status_code, 405)
 
-        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload.id))
+        response = c.post(
+            '/importer-api/data-layers/{0}/configure/'.format(upload.id))
         self.assertEqual(response.status_code, 400)
 
-        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload.id), data=json.dumps(payload),
+        response = c.post(
+            '/importer-api/data-layers/{0}/configure/'.format(upload.id), data=json.dumps(payload),
                           content_type='application/json')
         self.assertTrue(response.status_code, 200)
 
@@ -646,14 +954,18 @@ class UploaderTests(MapStoryTestMixin):
         self.assertEqual(layer.store, self.datastore.name)
         self.assertEqual(layer.storeType, 'dataStore')
         self.assertTrue(layer.attributes[1].attribute_type, 'xsd:dateTime')
-        self.assertTrue(layer.attributes.filter(attribute='date'), 'xsd:dateTime')
+        self.assertTrue(
+            layer.attributes.filter(attribute='date'),
+            'xsd:dateTime')
 
         lyr = self.cat.get_layer(layer.name)
         self.assertTrue('time' in lyr.resource.metadata)
-        # ensure a user who does not own the upload cannot configure an import from it.
+        # ensure a user who does not own the upload cannot configure an import
+        # from it.
         c.logout()
         c.login_as_admin()
-        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload.id))
+        response = c.post(
+            '/importer-api/data-layers/{0}/configure/'.format(upload.id))
         self.assertEqual(response.status_code, 404)
 
     def test_list_api(self):
@@ -671,15 +983,23 @@ class UploaderTests(MapStoryTestMixin):
         non_admin = User.objects.get(username=self.non_admin_username)
         from osgeo_importer.models import UploadFile
 
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'US_Shootings.csv')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'US_Shootings.csv')
 
         with open(f, 'rb') as f:
             uploaded_file = SimpleUploadedFile('test_data', f.read())
-            admin_upload = UploadedData.objects.create(state='Admin test', user=admin)
-            admin_upload.uploadfile_set.add(UploadFile.objects.create(file=uploaded_file))
+            admin_upload = UploadedData.objects.create(
+                state='Admin test', user=admin)
+            admin_upload.uploadfile_set.add(
+                UploadFile.objects.create(file=uploaded_file))
 
-            non_admin_upload = UploadedData.objects.create(state='Non admin test', user=non_admin)
-            non_admin_upload.uploadfile_set.add(UploadFile.objects.create(file=uploaded_file))
+            non_admin_upload = UploadedData.objects.create(
+                state='Non admin test', user=non_admin)
+            non_admin_upload.uploadfile_set.add(
+                UploadFile.objects.create(file=uploaded_file))
 
         c.login_as_admin()
         response = c.get('/importer-api/data/')
@@ -708,12 +1028,19 @@ class UploaderTests(MapStoryTestMixin):
         """
         c = AdminClient()
 
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'point_with_date.geojson')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'point_with_date.geojson')
         c = AdminClient()
         c.login_as_non_admin()
 
         with open(f) as fp:
-            response = c.post(reverse('uploads-new'), {'file': fp}, follow=True)
+            response = c.post(
+                reverse('uploads-new'),
+                {'file': fp},
+                follow=True)
 
         self.assertEqual(UploadedData.objects.all().count(), 1)
         id = UploadedData.objects.first().id
@@ -726,12 +1053,19 @@ class UploaderTests(MapStoryTestMixin):
         """
         Ensure that administrators can delete data that isn't theirs.
         """
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'point_with_date.geojson')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'point_with_date.geojson')
         c = AdminClient()
         c.login_as_non_admin()
 
         with open(f) as fp:
-            response = c.post(reverse('uploads-new'), {'file': fp}, follow=True)
+            response = c.post(
+                reverse('uploads-new'),
+                {'file': fp},
+                follow=True)
 
         self.assertEqual(UploadedData.objects.all().count(), 1)
 
@@ -749,12 +1083,19 @@ class UploaderTests(MapStoryTestMixin):
         """
         Tests providing a name in the configuration options.
         """
-        f = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'point_with_date.geojson')
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'point_with_date.geojson')
         c = AdminClient()
         c.login_as_non_admin()
         name = 'point-with-a-date'
         with open(f) as fp:
-            response = c.post(reverse('uploads-new'), {'file': fp}, follow=True)
+            response = c.post(
+                reverse('uploads-new'),
+                {'file': fp},
+                follow=True)
 
         payload = {'index': 0,
                    'convert_to_date': ['date'],
@@ -763,12 +1104,63 @@ class UploaderTests(MapStoryTestMixin):
                    'name': name,
                    'editable': True}
 
-        response = c.post('/importer-api/data-layers/1/configure/', data=json.dumps(payload),
+        response = c.post(
+            '/importer-api/data-layers/1/configure/', data=json.dumps(payload),
                           content_type='application/json')
 
         layer = Layer.objects.all()[0]
         self.assertEqual(layer.title, name.replace('-', '_'))
 
+<<<<<<< HEAD
+=======
+    def test_api_import(self):
+        """
+        Tests the import api.
+        """
+        f = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'point_with_date.geojson')
+        c = AdminClient()
+        c.login_as_non_admin()
+
+        with open(f) as fp:
+            response = c.post(
+                reverse('uploads-new'),
+                {'file': fp},
+                follow=True)
+
+        payload = {'index': 0,
+                   'convert_to_date': ['date'],
+                   'start_date': 'date',
+                   'configureTime': True,
+                   'editable': True}
+
+        self.assertTrue(
+            isinstance(UploadLayer.objects.first().configuration_options, dict))
+
+        response = c.get('/importer-api/data-layers/1/')
+        self.assertEqual(response.status_code, 200)
+
+        response = c.post(
+            '/importer-api/data-layers/1/configure/', data=json.dumps([payload]),
+                          content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('task' in response.content)
+
+        layer = Layer.objects.all()[0]
+        self.assertEqual(layer.srid, 'EPSG:4326')
+        self.assertEqual(layer.store, self.datastore.name)
+        self.assertEqual(layer.storeType, 'dataStore')
+        self.assertTrue(layer.attributes[1].attribute_type, 'xsd:dateTime')
+
+        lyr = self.cat.get_layer(layer.name)
+        self.assertTrue('time' in lyr.resource.metadata)
+        self.assertEqual(UploadLayer.objects.first().layer, layer)
+        self.assertTrue(UploadLayer.objects.first().task_id)
+>>>>>>> upstream/multiupload_cherrypick
 
     def test_valid_file_extensions(self):
         """
@@ -776,7 +1168,8 @@ class UploaderTests(MapStoryTestMixin):
         """
 
         for extension in load_handler(OSGEO_IMPORTER, 'test.txt').valid_extensions:
-            self.assertIsNone(validate_file_extension(SimpleUploadedFile('test.{0}'.format(extension), '')))
+            self.assertIsNone(validate_file_extension(
+                SimpleUploadedFile('test.{0}'.format(extension), '')))
 
         with self.assertRaises(ValidationError):
             validate_file_extension(SimpleUploadedFile('test.txt', ''))
@@ -787,35 +1180,62 @@ class UploaderTests(MapStoryTestMixin):
         """
 
         with self.assertRaises(ValidationError):
-            validate_inspector_can_read(SimpleUploadedFile('test.csv', 'test,loc\nyes,POINT(0,0)'))
+            validate_inspector_can_read(
+                SimpleUploadedFile(
+                    'test.csv',
+                    'test,loc\nyes,POINT(0,0)'))
 
         # This should pass (geom type is unknown)
-        validate_inspector_can_read(SimpleUploadedFile('test.csv', 'test,WKT\nyes,POINT(0,0)'))
+        validate_inspector_can_read(
+            SimpleUploadedFile(
+                'test.csv',
+                'test,WKT\nyes,POINT(0,0)'))
 
     def test_numeric_overflow(self):
         """
         Regression test for numeric field overflows in shapefiles.
         # https://trac.osgeo.org/gdal/ticket/5241
         """
-        self.generic_import('Walmart.zip', configuration_options=[{"configureTime":False,"convert_to_date":["W1_OPENDAT"],"editable":True,"index":0,"name":"Walmart","start_date":"W1_OPENDAT"}])
-
+        self.generic_import(
+            'Walmart.zip',
+            configuration_options=[{"configureTime": False,
+                                    "convert_to_date": ["W1_OPENDAT"],
+                                    "editable":True,
+                                    "index":0,
+                                    "name":"Walmart",
+                                    "start_date":"W1_OPENDAT"}])
 
     def test_multipolygon_shapefile(self):
         """
         Tests shapefile with multipart polygons.
         """
 
-        self.generic_import('PhoenixFirstDues.zip', configuration_options=[{'index': 0}])
+        self.generic_import(
+            'PhoenixFirstDues.zip',
+            configuration_options=[{'index': 0}])
 
     def test_gwc_handler(self):
         """
         Tests the GeoWebCache handler
         """
+<<<<<<< HEAD
         layer = self.generic_import('boxes_with_date.zip', configuration_options=[{'index': 0,
                                                                                    'convert_to_date': ['date'],
                                                                                    'start_date': 'date',
                                                                                    'configureTime': True
                                                                                    }])
+=======
+        layer = self.generic_import(
+            'boxes_with_date.shp', configuration_options=[{'index': 0,
+                                                           'convert_to_date':
+                                                           [
+                                                           'date'],
+                                                           'start_date':
+                                                           'date',
+                                                           'configureTime':
+                                                           True
+                                                           }])
+>>>>>>> upstream/multiupload_cherrypick
 
         gwc = GeoWebCacheHandler(None)
         gs_layer = self.cat.get_layer(layer.name)
@@ -828,7 +1248,13 @@ class UploaderTests(MapStoryTestMixin):
         self.assertEqual(int(payload[0]['status']), 200)
 
         # Don't configure time, ensure everything still works
+<<<<<<< HEAD
         layer = self.generic_import('boxes_with_date_iso_date.zip', configuration_options=[{'index': 0}])
+=======
+        layer = self.generic_import(
+            'boxes_with_date_iso_date.shp',
+            configuration_options=[{'index': 0}])
+>>>>>>> upstream/multiupload_cherrypick
         gs_layer = self.cat.get_layer(layer.name)
         self.cat._cache.clear()
         gs_layer.fetch()
@@ -841,11 +1267,22 @@ class UploaderTests(MapStoryTestMixin):
         """
         Tests utf8 characters in attributes
         """
+<<<<<<< HEAD
         filename = os.path.join(os.path.dirname(__file__), '..', 'importer-test-files', 'china_provinces.zip')
         layer = self.generic_import('china_provinces.zip')
+=======
+        filename = os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'importer-test-files',
+            'china_provinces.shp')
+        layer = self.generic_import('china_provinces.shp')
+>>>>>>> upstream/multiupload_cherrypick
         gi = OGRImport(filename)
         ds, insp = gi.open_target_datastore(gi.target_store)
-        sql = str("select NAME_CH from %s where NAME_PY = 'An Zhou'" % (layer.name))
+        sql = str(
+            "select NAME_CH from %s where NAME_PY = 'An Zhou'" %
+            (layer.name))
         res = ds.ExecuteSQL(sql)
         feat = res.GetFeature(0)
         self.assertEqual(feat.GetField('name_ch'), "安州")
@@ -854,9 +1291,11 @@ class UploaderTests(MapStoryTestMixin):
         """
         Test converting a field as date.
         """
-        results = self.generic_import('TM_WORLD_BORDERS_2005.zip', configuration_options=[{'index': 0,
-                                                                                           'start_date': 'Year',
-                                                                                           'configureTime': True}])
+        results = self.generic_import(
+            'TM_WORLD_BORDERS_2005.zip', configuration_options=[{'index': 0,
+                                                                 'start_date':
+                                                                 'Year',
+                                                                 'configureTime': True}])
         layer = self.cat.get_layer(results.typename)
         self.assertTrue('time' in layer.resource.metadata)
         self.assertEqual('year', layer.resource.metadata['time'].attribute)
@@ -865,7 +1304,9 @@ class UploaderTests(MapStoryTestMixin):
         """
         Regression test for preserving an FID field when target layer supports it but source does not.
         """
-        self.generic_import('noaa_paleoclimate.zip', configuration_options=[{'index': 0}])
+        self.generic_import(
+            'noaa_paleoclimate.zip',
+            configuration_options=[{'index': 0}])
 
 
 if __name__ == '__main__':
